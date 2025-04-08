@@ -11,6 +11,12 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
+variable "aws_region" {
+  description = "The AWS region to deploy resources to"
+  type        = string
+  default     = "us-east-1"  # You can change this default value as needed
+}
+
 ###########
 ###VPC#####
 ###########
