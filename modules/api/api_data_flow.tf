@@ -5,12 +5,12 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 variable "AWSRegion" {
-  description = "The AWS GovCloud region to deploy to"
+  description = "The AWS region to deploy to"
   type        = string
-  default     = "us-gov-east-1"
+  default     = "us-west-1"
   validation {
-    condition     = contains(["us-gov-west-1", "us-gov-east-1"], var.AWSRegion)
-    error_message = "Invalid AWS GovCloud region"
+    condition     = can(regex("^[a-z]+-[a-z]+-[0-9]+$", var.AWSRegion)) && !can(regex("^us-gov-", var.AWSRegion))
+    error_message = "Invalid AWS region format. Must be a valid AWS region (e.g., us-west-1, us-east-1). GovCloud regions are not allowed."
   }
 }
 
@@ -119,7 +119,7 @@ resource "aws_api_gateway_rest_api" "dataflow" {
             httpMethod           = "POST"
             type                 = "aws_proxy"
             passthroughBehavior  = "when_no_match"
-            uri                  = "arn:aws-us-gov:apigateway:${var.AWSRegion}:lambda:path/2015-03-31/functions/${var.functionDocManagementArn}/invocations"
+            uri                  = "arn:aws:apigateway:${var.AWSRegion}:lambda:path/2015-03-31/functions/${var.functionDocManagementArn}/invocations"
             responses            = {
               default = {
                 statusCode = "200"
@@ -194,4 +194,38 @@ resource "aws_lambda_permission" "dataflow" {
   function_name = each.value
   principal     = "apigateway.amazonaws.com"
   source_arn    = "arn:aws:execute-api:${var.AWSRegion}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.dataflow.id}/*/*/*"
+}
+
+resource "aws_iam_policy" "policy_apigw_auth1" {
+  policy = jsonencode({
+    Statement = [
+      {
+        Action   = ["execute-api:Invoke"]
+        Effect   = "Allow"
+        Resource = [
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PastMapper/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PastMapper",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocRouting/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocRouting",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMFinder/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMFinder",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMMapper/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMMapper",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/ReturnInfo/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/ReturnInfo",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocManagement/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocManagement",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/LLM/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/LLM",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/Indepth/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/Indepth",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMDetailed/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMDetailed",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PullDocument/*",
+          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PullDocument"
+        ]
+      }
+    ]
+    Version = "2012-10-17"
+  })
 }

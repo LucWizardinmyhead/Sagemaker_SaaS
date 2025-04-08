@@ -34,13 +34,13 @@ resource "aws_iam_role" "auth_role" {
     Statement = [
       {
         Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"  # Change to "Allow" if you want authenticated users to assume this role
+        Effect = "Allow"
         Principal = {
-          Federated = "cognito-identity-us-gov.amazonaws.com"
+          Federated = "cognito-identity.amazonaws.com"
         }
         Condition = {
           StringEquals = {
-            "cognito-identity.us-gov.amazonaws.com:sub" = aws_cognito_identity_pool.identity_pool.id
+            "cognito-identity.amazonaws.com:sub" = aws_cognito_identity_pool.identity_pool.id
           }
       }}
     ]
@@ -57,11 +57,11 @@ resource "aws_iam_role" "unauth_role" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Effect = "Allow"
         Principal = {
-          Federated = "cognito-identity-us-gov.amazonaws.com"
+          Federated = "cognito-identity.amazonaws.com"
         }
         Condition = {
           StringEquals = {
-            "cognito-identity.us-gov.amazonaws.com:sub" = aws_cognito_user_pool_client.user_pool_client.id 
+            "cognito-identity.amazonaws.com:sub" = aws_cognito_user_pool_client.user_pool_client.id
           }
       }}
     ]
@@ -178,28 +178,28 @@ resource "aws_s3_bucket" "deployment_bucket" {
 }
 
 resource "aws_s3_bucket_policy" "deployment_bucket_policy" {
-bucket = aws_s3_bucket.deployment_bucket.id  # Correct reference
-policy = jsonencode({
-  Version = "2012-10-17"
-  Statement = [
-    {
-      Action = "s3:*"
-      Effect = "Allow"
-      Principal = {
-        AWS = "arn:aws-us-gov:iam::271945552223:role/${var.lambda_exec_role}"
-      }
-      Resource = [
-        "${aws_s3_bucket.deployment_bucket.arn}/*",
-        aws_s3_bucket.deployment_bucket.arn
-      ]
-      Condition = {
-        Bool = {
-          "aws:SecureTransport" = true
+  bucket = aws_s3_bucket.deployment_bucket.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "s3:*"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.lambda_exec_role}"
+        }
+        Resource = [
+          "${aws_s3_bucket.deployment_bucket.arn}/*",
+          aws_s3_bucket.deployment_bucket.arn
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = true
+          }
         }
       }
-    }
-  ]
- })
+    ]
+  })
 }
 
 ###########
@@ -318,76 +318,76 @@ module "ecs" {
 resource "aws_lambda_function" "doc_management" {
   function_name = "DocManagement"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/docmanagement:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/docmanagement:latest"
   package_type = "Image" 
 }
 
 resource "aws_lambda_function" "doc_routing" {
   function_name = "DocRouting"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/docrouting:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/docrouting:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "indepth" {
   function_name = "Indepth"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/indepth:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/indepth:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "llm" {
   function_name = "LLM"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/llm:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/llm:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "past_mapper" {
   function_name = "PastMapper"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/pastmapper:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/pastmapper:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "pull_document" {
   function_name = "PullDocument"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/pulldocument:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/pulldocument:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "return_info" {
   function_name = "ReturnInfo"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/returninfo:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/returninfo:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "sam_detailed" {
   function_name = "SAMDetailed"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/samdetailed:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samdetailed:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "sam_finder" {
   function_name = "SAMFinder"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/samfinder:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samfinder:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "sam_gatherer" {
   function_name = "SAMGatherer"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/samgatherer:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samgatherer:latest"
   package_type = "Image"
 }
 
 resource "aws_lambda_function" "sam_mapper" {
   function_name = "SAMMapper"
   role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "271945552223.dkr.ecr.us-gov-west-1.amazonaws.com/sammapper:latest"
+  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/sammapper:latest"
   package_type = "Image"
 }

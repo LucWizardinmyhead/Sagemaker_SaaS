@@ -1,12 +1,12 @@
 variable "aws_region" {
-  default = "us-gov-west-1"
+  default = "us-west-1"
   type = string
 }
 
-variable env {
-  description = "GovCloud deployment environment"
+variable "env" {
+  description = "Deployment environment"
   type = string
-  default = "govcloud-dev"
+  default = "dev"
 }
 
 variable "auth_role_name" {
@@ -30,19 +30,19 @@ variable "lambda_exec_role" {
 variable "deployment_bucket_name" {
   description = "Name of the deployment bucket"
   type        = string
-  default     = "terraform-config-gov-dev-west-1"
+  default     = "terraform-config-dev-west-1"
 }
 
 variable "user_pool_name" {
   description = "Name of the Cognito User Pool"
   type        = string
-  default     = "gov_cloud_dev_user_pool"
+  default     = "dev_user_pool"
 }
 
 variable "identity_pool_name" {
   description = "Name of the Cognito Identity Pool"
   type        = string
-  default     = "gov_cloud_dev_identity_pool"
+  default     = "dev_identity_pool"
 }
 
 variable "data_flow" {
@@ -85,7 +85,7 @@ variable "db_allocated_storage" {
 variable "cluster_name" {
   description = "The name of the ECS cluster"
   type        = string
-  default     = "BDTool_gov_dev"
+  default     = "BDTool_dev"
 }
 
 variable "capacity_providers" {
