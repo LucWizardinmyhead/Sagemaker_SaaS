@@ -5,11 +5,11 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 variable "AWSRegion" {
-  description = "The AWS GovCloud region to deploy to"
+  description = "The AWS region to deploy to"
   type        = string
-  default     = "us-gov-east-1"
+  default     = "us-west-1"
   validation {
-    condition     = contains(["us-gov-west-1", "us-gov-east-1"], var.AWSRegion)
+    condition     = contains(["us-east-1", "us-east-2"], var.AWSRegion)
     error_message = "Invalid AWS GovCloud region"
   }
 }

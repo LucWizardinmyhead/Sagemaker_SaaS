@@ -8,6 +8,8 @@ resource "aws_db_instance" "default" {
   username           = var.db_username
   password           = var.db_password
   skip_final_snapshot = true  # Set to false if you want to take a final snapshot before deletion
+  db_subnet_group_name   = var.db_subnet_group_name
+  vpc_security_group_ids = var.vpc_security_group_ids
 
   tags = {
     Name = "${var.env}-postgres-db"

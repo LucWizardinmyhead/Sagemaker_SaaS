@@ -33,21 +33,6 @@ variable "functionReturnInfoArn" {
   type        = string
 }
 
-variable "functionSAMDetailedArn" {
-  description = "ARN of the SAM Detailed Lambda function"
-  type        = string
-}
-
-variable "functionSAMFinderArn" {
-  description = "ARN of the SAM Finder Lambda function"
-  type        = string
-}
-
-variable "functionSAMMapperArn" {
-  description = "ARN of the SAM Mapper Lambda function"
-  type        = string
-}
-
 variable "data_flow" {
   description = "Data flow configuration"
   type        = string

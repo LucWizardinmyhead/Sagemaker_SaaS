@@ -7,7 +7,7 @@ variable "env" {
 variable "aws_region" {
   description = "The AWS region to deploy the database"
   type        = string
-  default     = "us-gov-west-1"
+  default     = "us-west-1"
 }
 
 variable "db_instance_class" {
@@ -39,4 +39,14 @@ variable "db_allocated_storage" {
   description = "The allocated storage for the database in GB"
   type        = number
   default     = 10  # Adjust as needed
+}
+
+variable "db_subnet_group_name" {
+  description = "Name of the DB subnet group"
+  type        = string
+}
+
+variable "vpc_security_group_ids" {
+  description = "List of VPC security group IDs"
+  type        = list(string)
 }

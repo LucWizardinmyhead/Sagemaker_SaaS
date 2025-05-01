@@ -167,8 +167,20 @@ resource "aws_api_gateway_gateway_response" "dataflow_default_5xx" {
 # API Gateway Deployment
 resource "aws_api_gateway_deployment" "api_gw_dataflow" {
   rest_api_id = aws_api_gateway_rest_api.dataflow.id
-  stage_name  = local.should_not_create_env_resources ? "Prod" : var.env
   depends_on  = [aws_api_gateway_gateway_response.dataflow_default_4xx, aws_api_gateway_gateway_response.dataflow_default_5xx]
+}
+
+# Add this new stage resource
+resource "aws_api_gateway_stage" "prod_stage" {
+  stage_name    = local.should_not_create_env_resources ? "Prod" : var.env
+  rest_api_id   = aws_api_gateway_rest_api.dataflow.id
+  deployment_id = aws_api_gateway_deployment.api_gw_dataflow.id
+  
+  # Add any additional stage configuration
+  xray_tracing_enabled = true
+  tags = {
+    Environment = local.should_not_create_env_resources ? "Prod" : var.env
+  }
 }
 
 # Lambda Permissions for each function
@@ -181,9 +193,6 @@ locals {
     "functionPastMapper"    = var.functionPastMapperArn,
     "functionPullDocument"  = var.functionPullDocumentArn,
     "functionReturnInfo"    = var.functionReturnInfoArn,
-    "functionSAMDetailed"   = var.functionSAMDetailedArn,
-    "functionSAMFinder"     = var.functionSAMFinderArn,
-    "functionSAMMapper"     = var.functionSAMMapperArn,
   }
 }
 
@@ -207,10 +216,6 @@ resource "aws_iam_policy" "policy_apigw_auth1" {
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PastMapper",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocRouting/*",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocRouting",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMFinder/*",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMFinder",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMMapper/*",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMMapper",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/ReturnInfo/*",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/ReturnInfo",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/DocManagement/*",
@@ -219,8 +224,6 @@ resource "aws_iam_policy" "policy_apigw_auth1" {
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/LLM",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/Indepth/*",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/Indepth",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMDetailed/*",
-          "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/SAMDetailed",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PullDocument/*",
           "arn:aws:execute-api:us-west-1:423623830420:dataflow/dev/*/PullDocument"
         ]

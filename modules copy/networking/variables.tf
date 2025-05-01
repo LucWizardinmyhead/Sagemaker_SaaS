@@ -1,5 +1,5 @@
 variable "aws_region" {
-  default = "us-gov-west-1"
+  default = "us-west-1"
   type = string
 }
 

@@ -8,13 +8,31 @@ locals {
 }
 
 data "aws_caller_identity" "current" {}
-
-data "aws_region" "current" {}
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 variable "aws_region" {
   description = "The AWS region to deploy resources to"
   type        = string
-  default     = "us-east-1"  # You can change this default value as needed
+  default     = "us-west-1"  # You can change this default value as needed
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR block"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "az_count" {
+  description = "Number of AZs to use"
+  type        = number
+  default     = 2
+}
+
+variable "env_name" {
+  description = "Environment name"
+  type        = string
 }
 
 ###########
@@ -24,8 +42,16 @@ variable "aws_region" {
 module "networking" {
   source = "./modules/networking"
   
-  env        = var.env
-  aws_region = var.aws_region
+  # Required arguments
+  env           = var.env
+  aws_region    = var.aws_region
+  vpc_cidr      = var.vpc_cidr
+  azs           = slice(data.aws_availability_zones.available.names, 0, 2)
+  public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]  # Matches pub_subnets requirement
+  private_subnets = ["10.0.101.0/24", "10.0.102.0/24"] # Matches priv_subnets
+  
+  # Optional arguments
+  multi_az      = true
 }
 
 #########
@@ -97,7 +123,7 @@ resource "aws_iam_role" "lambda_exec_role" {
 #######
 
 resource "aws_cognito_user_pool" "user_pool" {
-  name = "gov_cloud_dev_user_pool"
+  name = "cloud_dev_user_pool"
 
   alias_attributes = ["email"]
   auto_verified_attributes = ["email"]
@@ -113,12 +139,12 @@ resource "aws_cognito_user_pool" "user_pool" {
   mfa_configuration = "OFF"  # Change to "ON" or "OPTIONAL" as needed
 
   tags = {
-    Name = "gov-cloud-dev"
+    Name = "cloud-dev"
   }
 }
 
 resource "aws_cognito_user_pool_client" "user_pool_client" {
-  name         = "gov_cloud_dev_user_pool_client"
+  name         = "cloud_dev_user_pool_client"
   user_pool_id = aws_cognito_user_pool.user_pool.id
 
   explicit_auth_flows = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
@@ -128,7 +154,7 @@ resource "aws_cognito_user_pool_client" "user_pool_client" {
 }
 
 resource "aws_cognito_identity_pool" "identity_pool" {
-  identity_pool_name = "gov_cloud_dev_identity_pool"
+  identity_pool_name = "cloud_dev_identity_pool"
   allow_unauthenticated_identities = true  # Set to false if you don't want unauthenticated access
 
   cognito_identity_providers {
@@ -156,10 +182,7 @@ module "api" {
   functionPastMapperArn    = aws_lambda_function.past_mapper.arn
   functionPullDocumentArn   = aws_lambda_function.pull_document.arn
   functionReturnInfoArn     = aws_lambda_function.return_info.arn
-  functionSAMDetailedArn     = aws_lambda_function.sam_detailed.arn
-  functionSAMFinderArn       = aws_lambda_function.sam_finder.arn
-  functionSAMMapperArn       = aws_lambda_function.sam_mapper.arn
-
+  
   data_flow = var.data_flow
 }
 
@@ -180,7 +203,7 @@ module "auth" {
 ##########  
 
 resource "aws_s3_bucket" "deployment_bucket" {
-  bucket = var.deployment_bucket_name
+  bucket = "terraform-config-dev-west-1-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_policy" "deployment_bucket_policy" {
@@ -209,19 +232,53 @@ resource "aws_s3_bucket_policy" "deployment_bucket_policy" {
 }
 
 ###########
-###DB#####
+### RDS ###
 ###########
+# 1. First define the security group
+resource "aws_security_group" "rds_sg" {
+  name        = "${var.env}-rds-sg"
+  description = "Security group for RDS access"
+  vpc_id      = module.networking.vpc_id
+  
+  ingress {
+    from_port   = 5432  # Change to 3306 for MySQL
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
+# 2. Then define the subnet group
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "${var.env}-rds-subnet-group"
+  subnet_ids = module.networking.private_subnet_ids
+
+  tags = {
+    Name = "${var.env}-rds-subnet-group"
+  }
+}
+
+# 3. Now call the database module with the references
 module "database" {
   source = "./modules/database"
 
-  env                = var.env
-  aws_region         = var.aws_region
-  db_instance_class   = var.db_instance_class
-  db_name            = var.db_name
-  db_username        = var.db_username
-  db_password        = var.db_password
+  env                  = var.env
+  aws_region           = var.aws_region
+  db_instance_class    = var.db_instance_class
+  db_name              = var.db_name
+  db_username          = var.db_username
+  db_password          = var.db_password
   db_allocated_storage = var.db_allocated_storage
+  
+  db_subnet_group_name    = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
 }
 
 ##########
@@ -321,79 +378,3 @@ module "ecs" {
 #   name = join("", [aws_iam_role.auth_role.arn, "-idp"])
 # }
 
-resource "aws_lambda_function" "doc_management" {
-  function_name = "DocManagement"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/docmanagement:latest"
-  package_type = "Image" 
-}
-
-resource "aws_lambda_function" "doc_routing" {
-  function_name = "DocRouting"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/docrouting:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "indepth" {
-  function_name = "Indepth"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/indepth:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "llm" {
-  function_name = "LLM"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/llm:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "past_mapper" {
-  function_name = "PastMapper"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/pastmapper:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "pull_document" {
-  function_name = "PullDocument"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/pulldocument:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "return_info" {
-  function_name = "ReturnInfo"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/returninfo:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "sam_detailed" {
-  function_name = "SAMDetailed"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samdetailed:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "sam_finder" {
-  function_name = "SAMFinder"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samfinder:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "sam_gatherer" {
-  function_name = "SAMGatherer"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/samgatherer:latest"
-  package_type = "Image"
-}
-
-resource "aws_lambda_function" "sam_mapper" {
-  function_name = "SAMMapper"
-  role          = aws_iam_role.lambda_exec_role.arn
-  image_uri     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/sammapper:latest"
-  package_type = "Image"
-}

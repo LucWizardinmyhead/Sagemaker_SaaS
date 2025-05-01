@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-gov-west-1" # Replace with your desired region
+  region = "us-west-1" # Replace with your desired region
 }
 
 data "aws_region" "current" {}
@@ -24,8 +24,7 @@ resource "aws_s3_bucket" "s3_bucket" {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "HEAD", "PUT", "POST", "DELETE"]
     allowed_origins = ["*"]
-    exposed_headers = ["x-amz-server-side-encryption", "x-amz-request-id", "x-amz-id-2", "ETag"]
-    max_age_seconds = 3000
+    expose_headers  = ["ETag", "x-amz-version-id"]
   }
 
   server_side_encryption_configuration {
@@ -52,7 +51,7 @@ resource "aws_iam_policy" "s3_auth_private_policy" {
         Action   = split(",", var.s3_permissions_authenticated_private)
         Effect   = "Allow"
         Resource = [
-          join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id, "/private/${cognito-identity.amazonaws.com:sub}/*"])
+          join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/private/${cognito-identity.amazonaws.com:sub}/*"])
         ]
       }
     ]
@@ -70,7 +69,7 @@ resource "aws_iam_policy" "s3_auth_protected_policy" {
         Action   = split(",", var.s3_permissions_authenticated_protected)
         Effect   = "Allow"
         Resource = [
-          join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id, "/protected/${cognito-identity.amazonaws.com:sub}/*"])
+          join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/protected/${cognito-identity.amazonaws.com:sub}/*"])
         ]
       }
     ]
@@ -88,7 +87,7 @@ resource "aws_iam_policy" "s3_auth_public_policy" {
         Action   = split(",", var.s3_permissions_authenticated_public)
         Effect   = "Allow"
         Resource = [
-          join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id, "/public/*"])
+          join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/public/*"])
         ]
       }
     ]
@@ -105,12 +104,12 @@ resource "aws_iam_policy" "s3_auth_read_policy" {
       {
         Action   = "s3:GetObject"
         Effect   = "Allow"
-        Resource = join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id, "/protected/*"])
+        Resource = join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/protected/*"])
       },
       {
         Action   = "s3:ListBucket"
         Effect   = "Allow"
-        Resource = join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id])
+        Resource = join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id])
         Condition = {
           StringLike = {
             "s3:prefix" = [
@@ -139,7 +138,7 @@ resource "aws_iam_policy" "s3_auth_upload_policy" {
         Action   = split(",", var.s3_permissions_authenticated_uploads)
         Effect   = "Allow"
         Resource = [
-          join("", ["arn:aws-us-gov:s3:::", aws_s3_bucket.s3_bucket.id, "/uploads/*"])
+          join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/uploads/*"])
         ]
       }
     ]
