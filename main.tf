@@ -169,16 +169,18 @@ resource "aws_s3_bucket_policy" "deployment_bucket_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action    = "s3:*"
-        Effect    = "Allow"
-        Principal = "*"  # Allow all principals (adjust as needed)
+        Action    = "s3:*",
+        Effect    = "Allow",
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"  # Restrict to your account
+        },
         Resource = [
           "${aws_s3_bucket.deployment_bucket.arn}/*",
           aws_s3_bucket.deployment_bucket.arn
-        ]
+        ],
         Condition = {
           Bool = {
-            "aws:SecureTransport" = true  # Enforce HTTPS
+            "aws:SecureTransport" = true
           }
         }
       }
