@@ -74,6 +74,10 @@ resource "aws_iam_role" "auth_role" {
       } }
     ]
   })
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_iam_role" "unauth_role" {
@@ -95,6 +99,10 @@ resource "aws_iam_role" "unauth_role" {
       } }
     ]
   })
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 
@@ -161,6 +169,10 @@ module "auth" {
 
 resource "aws_s3_bucket" "deployment_bucket" {
   bucket = "terraform-config-dev-west-1-${data.aws_caller_identity.current.account_id}"
+
+  lifecycle {
+    prevent_destroy = true  # Prevents accidental deletion
+  }
 }
 
 resource "aws_s3_bucket_policy" "deployment_bucket_policy" {
@@ -217,8 +229,8 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "${var.env}-rds-subnet-group"
   subnet_ids = module.networking.private_subnet_ids
 
-  tags = {
-    Name = "${var.env}-rds-subnet-group"
+  lifecycle {
+    create_before_destroy = true  # Ensures smooth updates
   }
 }
 
