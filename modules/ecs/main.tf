@@ -1,7 +1,22 @@
+variable "ecs_cluster_name" {
+  type        = string
+  description = "Name of the ECS cluster."
+  default     = "BDTool"  # Default value, override as needed
+}
+
 resource "aws_ecs_cluster" "bdtool_cluster" {
-  name = "BDTool_gov_dev"
-  #capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+  name = var.ecs_cluster_name
+
+  # Uncomment and adjust if using Fargate:
+  # capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+
+  # Enable CloudWatch Container Insights (optional)
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+
   tags = {
-    Name = "BDTool_gov_dev"
+    Name = var.ecs_cluster_name
   }
 }

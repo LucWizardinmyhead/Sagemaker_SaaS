@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-west-1" # Replace with your desired region
+  region = var.aws_region # Replace with your desired region
 }
 
 data "aws_region" "current" {}
@@ -51,11 +51,15 @@ resource "aws_iam_policy" "s3_auth_private_policy" {
         Action   = split(",", var.s3_permissions_authenticated_private)
         Effect   = "Allow"
         Resource = [
-          join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/private/${cognito-identity.amazonaws.com:sub}/*"])
+          join("", ["arn:aws:${data.aws_region.current.name}:s3:::", aws_s3_bucket.s3_bucket.id, "/private/${cognito-identity.amazonaws.com:sub}/*"])
         ]
       }
     ]
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_policy" "s3_auth_protected_policy" {
@@ -104,12 +108,12 @@ resource "aws_iam_policy" "s3_auth_read_policy" {
       {
         Action   = "s3:GetObject"
         Effect   = "Allow"
-        Resource = join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id, "/protected/*"])
+        Resource = "arn:aws:${data.aws_region.current.name}:s3:::${aws_s3_bucket.s3_bucket.id}/protected/*"
       },
       {
         Action   = "s3:ListBucket"
         Effect   = "Allow"
-        Resource = join("", ["arn:aws-us-west-1:s3:::", aws_s3_bucket.s3_bucket.id])
+        Resource = "arn:aws:${data.aws_region.current.name}:s3:::${aws_s3_bucket.s3_bucket.id}"
         Condition = {
           StringLike = {
             "s3:prefix" = [
@@ -125,6 +129,10 @@ resource "aws_iam_policy" "s3_auth_read_policy" {
       }
     ]
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_policy" "s3_auth_upload_policy" {

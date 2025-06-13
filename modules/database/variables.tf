@@ -1,7 +1,7 @@
 variable "env" {
   description = "The environment for the deployment (e.g., dev, prod)"
   type        = string
-  default     = "govcloud-dev"
+  default     = "cloud-dev"
 }
 
 variable "aws_region" {

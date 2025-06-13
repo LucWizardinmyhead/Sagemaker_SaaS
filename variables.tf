@@ -1,8 +1,7 @@
-
 variable "env" {
   description = "Deployment environment"
-  type = string
-  default = "dev"
+  type        = string
+  default     = "dev"
 }
 
 variable "auth_role_name" {
@@ -15,12 +14,6 @@ variable "unauth_role_name" {
   description = "Name of the unauth role"
   type        = string
   default     = "dev-unauth"
-}
-
-variable "lambda_exec_role" {
-  description = "Name of the lambda exec role"
-  type        = string
-  default     = "lambda_exec_role"
 }
 
 variable "deployment_bucket_name" {
@@ -50,32 +43,32 @@ variable "data_flow" {
 variable "db_instance_class" {
   description = "The instance class for the database"
   type        = string
-  default     = "db.t3.micro"  # You can adjust this as needed
+  default     = "db.t3.micro" # You can adjust this as needed
 }
 
 variable "db_name" {
   description = "The name of the database"
   type        = string
-  default     = "pikes_peak"  # Provide a default name or leave it empty
+  default     = "pikes_peak" # Provide a default name or leave it empty
 }
 
 variable "db_username" {
   description = "The username for the database"
   type        = string
-  default     = "pikespeak"  # Provide a default username or leave it empty
+  default     = "pikespeak" # Provide a default username or leave it empty
 }
 
 variable "db_password" {
   description = "The password for the database"
   type        = string
-  sensitive   = true  # Mark as sensitive
-  default     = "Pikespeak"  # Provide a default password or leave it empty
+  sensitive   = true        # Mark as sensitive
+  default     = "Pikespeak" # Provide a default password or leave it empty
 }
 
 variable "db_allocated_storage" {
   description = "The allocated storage for the database in GB"
   type        = number
-  default     = 10  # Adjust as needed
+  default     = 10 # Adjust as needed
 }
 
 variable "cluster_name" {
@@ -88,6 +81,12 @@ variable "capacity_providers" {
   description = "The capacity providers for the ECS cluster"
   type        = list(string)
   default     = ["FARGATE", "FARGATE_SPOT"]
+}
+
+variable "prod_vpc" {
+  description = "production vpc"
+  type        = string
+  default     = "vpc-12345678"  # Set a default VPC ID or leave empty if not needed
 }
 
 # variable "s3_key" {

@@ -1,7 +1,7 @@
 variable "cluster_name" {
   description = "The name of the ECS cluster"
   type        = string
-  default     = "BDTool_gov_dev"
+  default     = "BDTool"
 }
 
 # variable "capacity_providers" {
